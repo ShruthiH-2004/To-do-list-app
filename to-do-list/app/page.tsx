@@ -624,7 +624,7 @@ export default function Home() {
         <header className="mb-8 flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold">
-              {activeTab === 'profile' ? 'Your Profile' : `Good Morning, ${user.name}!`}
+              {activeTab === 'profile' ? 'Your Profile' : `Welcome, ${user.name}!`}
             </h2>
             <p className="opacity-70">
               {format(new Date(), "EEEE, MMMM do, yyyy")}
