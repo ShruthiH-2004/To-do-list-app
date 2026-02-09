@@ -531,6 +531,7 @@ export default function Home() {
                   setActiveTab("calendar");
                 }}
                 value={selectedDate}
+                showNeighboringMonth={false}
                 className="react-calendar-custom"
                 tileClassName={({ date, view }) => {
                   if (view === "month") {

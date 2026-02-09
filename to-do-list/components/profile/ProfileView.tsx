@@ -91,9 +91,7 @@ export default function ProfileView({ user, tasks, onUpdateUser, onDeleteUser }:
                         )}
 
                         <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
-                                <Trophy className="h-3 w-3" /> Level 1 Achiever
-                            </span>
+
                             <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
                                 <CalendarDays className="h-3 w-3" /> Joined {format(new Date(), "MMM yyyy")}
                             </span>
