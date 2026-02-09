@@ -5,7 +5,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { User, CheckCircle2, Clock, Trophy, Edit2, CalendarDays, Save, X, Trash2 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Task {
@@ -34,9 +34,16 @@ export default function ProfileView({ user, tasks, onUpdateUser, onDeleteUser }:
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<UserProfile>(user);
 
+    // Stats Calculations
     const completedCount = tasks.filter((t) => t.completed).length;
     const pendingCount = tasks.length - completedCount;
-    const completionRate = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+    // Overall Activity Productivity
+    const overallRate = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+
+    // Everyday Productivity (Today)
+    const todayTasks = tasks.filter(t => isSameDay(new Date(t.date), new Date()));
+    const todayCompleted = todayTasks.filter(t => t.completed).length;
+    const dailyRate = todayTasks.length > 0 ? Math.round((todayCompleted / todayTasks.length) * 100) : 0;
 
     const handleSave = () => {
         onUpdateUser(formData);
@@ -128,22 +135,41 @@ export default function ProfileView({ user, tasks, onUpdateUser, onDeleteUser }:
                     </GlassCard>
                 </motion.div>
 
-                {/* Completion Rate Card */}
+                {/* Productivity Card (Split) */}
                 <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
-                    <GlassCard className="flex h-full flex-col justify-between p-8 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-200 dark:border-blue-900/30">
-                        <div>
-                            <h4 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200">Productivity Score</h4>
-                            <h3 className="mt-2 text-5xl font-bold text-blue-600 dark:text-blue-400">{completionRate}%</h3>
-                            <p className="text-sm text-zinc-500 mt-1">Completion Rate</p>
+                    <GlassCard className="flex h-full flex-col justify-center p-6 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-200 dark:border-blue-900/30">
+                        <h4 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 mb-4">Productivity</h4>
+
+                        {/* Overall Progress */}
+                        <div className="mb-4">
+                            <div className="flex justify-between text-sm mb-1">
+                                <span className="text-zinc-500">Overall Activity</span>
+                                <span className="font-bold text-blue-600 dark:text-blue-400">{overallRate}%</span>
+                            </div>
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${overallRate}%` }}
+                                    transition={{ duration: 0.8 }}
+                                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-600"
+                                />
+                            </div>
                         </div>
 
-                        <div className="relative mt-6 h-3 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${completionRate}%` }}
-                                transition={{ duration: 1, delay: 0.5 }}
-                                className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-indigo-600"
-                            />
+                        {/* Daily Progress */}
+                        <div>
+                            <div className="flex justify-between text-sm mb-1">
+                                <span className="text-zinc-500">Everyday Productivity</span>
+                                <span className="font-bold text-indigo-600 dark:text-indigo-400">{dailyRate}%</span>
+                            </div>
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${dailyRate}%` }}
+                                    transition={{ duration: 0.8, delay: 0.2 }}
+                                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-600"
+                                />
+                            </div>
                         </div>
                     </GlassCard>
                 </motion.div>

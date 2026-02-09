@@ -157,7 +157,7 @@ export default function Home() {
       id: crypto.randomUUID(),
       title: newTask,
       completed: false,
-      date: selectedDate,
+      date: activeTab === "calendar" ? selectedDate : new Date(), // Use selected date if in calendar view
       important: activeTab === "important",
     };
     setTasks([...tasks, task]);
@@ -176,11 +176,32 @@ export default function Home() {
     if (activeTab === "today") return isSameDay(task.date, new Date());
     if (activeTab === "important") return task.important;
     if (activeTab === "calendar") return isSameDay(task.date, selectedDate);
-    return true; // "tasks" tab shows all
+    return true; // "tasks" [All Tasks] tab shows all
   });
 
-  const completedCount = tasks.filter((t) => t.completed).length;
-  const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
+  // Dynamic Overview Stats based on Active Tab
+  let overviewTitle = "Today's Overview";
+  let overviewCompleted = 0;
+  let overviewTotal = 0;
+
+  if (activeTab === "tasks") {
+    overviewTitle = "Total Overview";
+    overviewCompleted = tasks.filter(t => t.completed).length;
+    overviewTotal = tasks.length;
+  } else if (activeTab === "calendar") {
+    const selectedTasks = tasks.filter(t => isSameDay(t.date, selectedDate));
+    overviewTitle = `Overview for ${format(selectedDate, "MMM d")}`;
+    overviewCompleted = selectedTasks.filter(t => t.completed).length;
+    overviewTotal = selectedTasks.length;
+  } else {
+    // Default to Today for "today" tab and others
+    const todayTasks = tasks.filter(t => isSameDay(new Date(t.date), new Date()));
+    overviewTitle = "Today's Overview";
+    overviewCompleted = todayTasks.filter(t => t.completed).length;
+    overviewTotal = todayTasks.length;
+  }
+
+  const overviewProgress = overviewTotal > 0 ? (overviewCompleted / overviewTotal) * 100 : 0;
 
   if (!user) {
     return <AuthPage onAuth={handleAuth} />;
@@ -227,7 +248,7 @@ export default function Home() {
         {/* Task List Section */}
         <GlassCard className="col-span-2 min-h-[500px] flex flex-col">
           <h3 className="mb-6 text-2xl font-semibold capitalize">
-            {activeTab === "calendar" ? `Tasks for ${format(selectedDate, "MMM do")}` : `${activeTab} Tasks`}
+            {activeTab === "calendar" ? `Tasks for ${format(selectedDate, "MMM do")}` : activeTab === "tasks" ? "All Tasks" : `${activeTab} Tasks`}
           </h3>
 
           {/* Add Task Input */}
@@ -279,7 +300,7 @@ export default function Home() {
                   </div>
 
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-xs opacity-50 mr-2">{format(task.date, 'MMM d')}</span>
+                    <span className="text-xs opacity-50 mr-2">{format(new Date(task.date), 'MMM d')}</span>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -298,24 +319,25 @@ export default function Home() {
           </div>
         </GlassCard>
 
-        {/* Right Panel: Stats & Calendar */}
+        {/* Right Panel: Stats Only (Calendar Removed) */}
         <div className="space-y-6">
           <GlassCard className="bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border-violet-200 dark:border-violet-900/30">
-            <h3 className="mb-4 text-lg font-semibold">Overview</h3>
+            <h3 className="mb-4 text-lg font-semibold">{overviewTitle}</h3>
             <div className="flex justify-between text-sm mb-2">
               <span className="opacity-70">Completed</span>
               <span className="font-bold text-violet-600 dark:text-violet-400">
-                {completedCount}/{tasks.length}
+                {overviewCompleted}/{overviewTotal}
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
               <div
                 className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
-                style={{ width: `${progress}%` }}
+                style={{ width: `${overviewProgress}%` }}
               />
             </div>
           </GlassCard>
 
+          {/* Calendar Widget */}
           <GlassCard className="p-4 flex justify-center">
             <Calendar
               onChange={(value) => {
@@ -334,6 +356,7 @@ export default function Home() {
               }}
             />
           </GlassCard>
+
         </div>
       </section>
     );
@@ -355,7 +378,6 @@ export default function Home() {
             { id: "today", label: "Today", icon: <CalendarIcon className="mr-3 h-5 w-5" /> },
             { id: "important", label: "Important", icon: <Star className="mr-3 h-5 w-5" /> },
             { id: "tasks", label: "All Tasks", icon: <CheckCircle2 className="mr-3 h-5 w-5" /> },
-            { id: "calendar", label: "Calendar", icon: <CalendarIcon className="mr-3 h-5 w-5" /> },
           ].map((item) => (
             <button
               key={item.id}
