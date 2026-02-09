@@ -277,17 +277,7 @@ export default function AuthPage({ onAuth }: { onAuth: (user: any, method: "logi
                                 : "Back to Login"}
                     </button>
 
-                    <button
-                        onClick={() => {
-                            if (confirm("⚠️ Are you sure? This will delete ALL users and tasks permanently.")) {
-                                localStorage.clear();
-                                window.location.reload();
-                            }
-                        }}
-                        className="text-xs text-red-400 hover:text-red-300 opacity-50 hover:opacity-100 transition-opacity"
-                    >
-                        Reset All App Data (Dev Only)
-                    </button>
+
                 </div>
             </GlassCard>
         </div>
