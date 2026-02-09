@@ -21,7 +21,7 @@ interface Task {
 }
 
 export default function Home() {
-  const [user, setUser] = useState<{ name: string; email?: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email?: string; dob?: string; bio?: string } | null>(null);
   const [activeTab, setActiveTab] = useState("today");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState("");
@@ -99,7 +99,16 @@ export default function Home() {
 
   const renderContent = () => {
     if (activeTab === "profile") {
-      return <ProfileView user={user} tasks={tasks} />;
+      return (
+        <ProfileView
+          user={user!}
+          tasks={tasks}
+          onUpdateUser={(updatedUser) => {
+            setUser(updatedUser);
+            localStorage.setItem("taskmaster_user", JSON.stringify(updatedUser));
+          }}
+        />
+      );
     }
 
     return (
