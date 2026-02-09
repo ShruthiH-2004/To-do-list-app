@@ -1,8 +1,10 @@
+"use client";
+
 import { useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { User, CheckCircle2, Clock, Trophy, Edit2, CalendarDays, Save, X, Trash2, Quote } from "lucide-react";
+import { User, CheckCircle2, Clock, Edit2, CalendarDays, Save, X, Trash2, Quote } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -91,7 +93,6 @@ export default function ProfileView({ user, tasks, onUpdateUser, onDeleteUser }:
                         )}
 
                         <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-
                             <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
                                 <CalendarDays className="h-3 w-3" /> Joined {format(new Date(), "MMM yyyy")}
                             </span>

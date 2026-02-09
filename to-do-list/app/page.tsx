@@ -6,7 +6,7 @@ import ProfileView from "@/components/profile/ProfileView";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Calendar as CalendarIcon, ListTodo, Star, User, LogOut, CheckCircle2, Delete, Trash2, Plus, X, Edit2, ChevronRight, CheckSquare } from "lucide-react";
+import { Calendar as CalendarIcon, ListTodo, Star, User, LogOut, CheckCircle2, Trash2, Plus, X, Edit2, CheckSquare } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
@@ -355,6 +355,11 @@ export default function Home() {
     overviewTitle = `Overview for ${format(selectedDate, "MMM d")}`;
     overviewCompleted = selectedTasks.filter(t => t.completed).length;
     overviewTotal = selectedTasks.length;
+  } else if (activeTab === "important") {
+    const importantTasks = tasks.filter(t => t.important);
+    overviewTitle = "Important Overview";
+    overviewCompleted = importantTasks.filter(t => t.completed).length;
+    overviewTotal = importantTasks.length;
   } else {
     // Default to Today for "today" tab and others
     const todayTasks = tasks.filter(t => isSameDay(new Date(t.date), new Date()));
