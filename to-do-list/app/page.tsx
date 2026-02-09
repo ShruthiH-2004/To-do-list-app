@@ -20,8 +20,18 @@ interface Task {
   important: boolean;
 }
 
+interface UserProfile {
+  name: string;
+  email: string;
+  password?: string;
+  dob?: string;
+  bio?: string;
+  securityQuestion?: string;
+  securityAnswer?: string;
+}
+
 export default function Home() {
-  const [user, setUser] = useState<{ name: string; email?: string; dob?: string; bio?: string } | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState("today");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState("");
@@ -29,38 +39,117 @@ export default function Home() {
 
   /* Persistence Logic */
   useEffect(() => {
-    // Load User
-    const savedUser = localStorage.getItem("taskmaster_user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-
-    // Load Tasks
-    const savedTasks = localStorage.getItem("taskmaster_tasks");
-    if (savedTasks) {
-      try {
-        const parsedTasks = JSON.parse(savedTasks).map((task: any) => ({
-          ...task,
-          date: new Date(task.date),
-        }));
-        setTasks(parsedTasks);
-      } catch (e) {
-        console.error("Failed to load tasks", e);
-      }
+    // 1. Check for Active Session
+    const sessionUser = localStorage.getItem("taskmaster_session");
+    if (sessionUser) {
+      setUser(JSON.parse(sessionUser));
     }
   }, []);
 
+  // Handle User Session & Data Loading
   useEffect(() => {
-    if (user) {
-      localStorage.setItem("taskmaster_user", JSON.stringify(user));
+    if (user && user.email) {
+      // A. Save Session
+      localStorage.setItem("taskmaster_session", JSON.stringify(user));
+
+      // B. Save/Update Profile in Database
+      const profilesStr = localStorage.getItem("taskmaster_profiles");
+      const profiles = profilesStr ? JSON.parse(profilesStr) : {};
+
+      // Merge with existing password if not present in current user object update (to avoid overwrite if we didn't load it)
+      // But we generally load the full object.
+      profiles[user.email] = user;
+      localStorage.setItem("taskmaster_profiles", JSON.stringify(profiles));
+
+      // C. Load User-Specific Tasks
+      const userTasksKey = `taskmaster_tasks_${user.email}`;
+      const savedTasks = localStorage.getItem(userTasksKey);
+      if (savedTasks) {
+        try {
+          const parsedTasks = JSON.parse(savedTasks).map((task: any) => ({
+            ...task,
+            date: new Date(task.date),
+          }));
+          setTasks(parsedTasks);
+        } catch (e) {
+          console.error("Failed to load tasks", e);
+          setTasks([]);
+        }
+      } else {
+        setTasks([]); // No tasks for this user yet
+      }
     } else {
-      localStorage.removeItem("taskmaster_user");
+      // Logout Cleanup
+      localStorage.removeItem("taskmaster_session");
+      setTimeout(() => setTasks([]), 0); // Clear tasks from UI immediately
     }
   }, [user]);
 
+  // Save Tasks specifically for the current user
   useEffect(() => {
-    localStorage.setItem("taskmaster_tasks", JSON.stringify(tasks));
-  }, [tasks]);
+    if (user && user.email && tasks.length >= 0) { // Allow saving empty array
+      const userTasksKey = `taskmaster_tasks_${user.email}`;
+      localStorage.setItem(userTasksKey, JSON.stringify(tasks));
+    }
+  }, [tasks, user]);
+
+  const handleAuth = (authData: any, method: "login" | "signup" | "reset" | "get_question"): string | void | any => {
+    const { email, password, name, securityQuestion, securityAnswer } = authData;
+
+    // 1. Get all profiles
+    const profilesStr = localStorage.getItem("taskmaster_profiles");
+    const profiles = profilesStr ? JSON.parse(profilesStr) : {};
+
+    // 2. Check if this user exists
+    const existingUser = profiles[email];
+
+    if (method === "login") {
+      if (!existingUser) {
+        return "Account does not exist. Please Sign Up.";
+      }
+      if (existingUser.password !== password) {
+        return "Incorrect password.";
+      }
+      // Success
+      setUser(existingUser);
+    } else if (method === "signup") {
+      // Signup
+      if (existingUser) {
+        return "Account already exists with this email.";
+      }
+      // Create new user
+      const newUser = {
+        name,
+        email,
+        password, // Save password
+        securityQuestion,
+        securityAnswer,
+        bio: "",
+        dob: ""
+      };
+      setUser(newUser);
+    } else if (method === "get_question") {
+      // Forgot Password - Step 1
+      if (!existingUser) {
+        return "Account does not exist.";
+      }
+      return { question: existingUser.securityQuestion || "What is your pet's name?" }; // Fallback
+    } else if (method === "reset") {
+      // Forgot Password - Step 2 (Reset)
+      if (!existingUser) return "Error finding account.";
+
+      if (existingUser.securityAnswer?.toLowerCase() !== securityAnswer.toLowerCase()) {
+        return "Incorrect answer.";
+      }
+
+      // Update Password logic happens here, we simulate it by updating the specific user profile
+      existingUser.password = password;
+      profiles[email] = existingUser;
+      localStorage.setItem("taskmaster_profiles", JSON.stringify(profiles));
+
+      return null; // Success (no error)
+    }
+  };
 
   const addTask = () => {
     if (!newTask.trim()) return;
@@ -94,19 +183,41 @@ export default function Home() {
   const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
 
   if (!user) {
-    return <AuthPage onLogin={setUser} />;
+    return <AuthPage onAuth={handleAuth} />;
   }
+
+  const handleDeleteAccount = () => {
+    if (!user || !user.email) return;
+
+    // 1. Remove User Tasks
+    const userTasksKey = `taskmaster_tasks_${user.email}`;
+    localStorage.removeItem(userTasksKey);
+
+    // 2. Remove User Profile
+    const profilesStr = localStorage.getItem("taskmaster_profiles");
+    if (profilesStr) {
+      const profiles = JSON.parse(profilesStr);
+      delete profiles[user.email];
+      localStorage.setItem("taskmaster_profiles", JSON.stringify(profiles));
+    }
+
+    // 3. Clear Session
+    localStorage.removeItem("taskmaster_session");
+    setUser(null);
+    setTasks([]);
+  };
 
   const renderContent = () => {
     if (activeTab === "profile") {
       return (
         <ProfileView
-          user={user!}
+          user={user}
           tasks={tasks}
           onUpdateUser={(updatedUser) => {
             setUser(updatedUser);
-            localStorage.setItem("taskmaster_user", JSON.stringify(updatedUser));
+            // Explicitly force a save to session/profiles via useEffect
           }}
+          onDeleteUser={handleDeleteAccount}
         />
       );
     }
@@ -270,7 +381,9 @@ export default function Home() {
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-sm font-semibold">{user.name}</p>
-              <p className="truncate text-xs opacity-70">user@example.com</p>
+              <p className="truncate text-xs opacity-70">
+                {user.email || "user@example.com"}
+              </p>
             </div>
           </div>
           <Button

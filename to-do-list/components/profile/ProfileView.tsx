@@ -4,7 +4,7 @@ import { useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { User, CheckCircle2, Clock, Trophy, Edit2, CalendarDays, Save, X } from "lucide-react";
+import { User, CheckCircle2, Clock, Trophy, Edit2, CalendarDays, Save, X, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -27,9 +27,10 @@ interface ProfileViewProps {
     user: UserProfile;
     tasks: Task[];
     onUpdateUser: (updatedUser: UserProfile) => void;
+    onDeleteUser: () => void;
 }
 
-export default function ProfileView({ user, tasks, onUpdateUser }: ProfileViewProps) {
+export default function ProfileView({ user, tasks, onUpdateUser, onDeleteUser }: ProfileViewProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<UserProfile>(user);
 
@@ -189,6 +190,28 @@ export default function ProfileView({ user, tasks, onUpdateUser }: ProfileViewPr
                             )}
                         </div>
                     </div>
+                </GlassCard>
+
+                <GlassCard className="p-6 flex flex-col justify-center items-center text-center space-y-4 border-red-200 dark:border-red-900/30">
+                    <div className="p-3 rounded-full bg-red-100 text-red-600 dark:bg-red-900/20">
+                        <Trash2 className="h-6 w-6" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Danger Zone</h3>
+                        <p className="text-sm text-zinc-500 mt-1">
+                            Once you delete your account, there is no going back. All your data will be permanently removed.
+                        </p>
+                    </div>
+                    <Button
+                        onClick={() => {
+                            if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+                                onDeleteUser();
+                            }
+                        }}
+                        className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto"
+                    >
+                        Delete Account
+                    </Button>
                 </GlassCard>
             </div>
         </div>
