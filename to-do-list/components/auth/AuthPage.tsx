@@ -10,6 +10,11 @@ import { Chrome, ArrowRight, User, Mail, Lock } from "lucide-react";
 export default function AuthPage({ onLogin }: { onLogin: (user: any) => void }) {
     const [isLogin, setIsLogin] = useState(true);
     const [showSplash, setShowSplash] = useState(true);
+    const [formData, setFormData] = useState({
+        name: "",
+        email: "",
+        password: ""
+    });
 
     useEffect(() => {
         const timer = setTimeout(() => setShowSplash(false), 2500);
@@ -18,8 +23,15 @@ export default function AuthPage({ onLogin }: { onLogin: (user: any) => void }) 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Simulate login for now
-        onLogin({ name: "User" });
+        // If logging in with just email/pass, we might want to fetch the user name or just use the email part as name
+        // For this demo, if signing up, use the provided name. If signing in, fallback to "User" or extract from email.
+
+        const userName = isLogin ? (formData.name || formData.email.split('@')[0]) : formData.name;
+
+        onLogin({
+            name: userName,
+            email: formData.email
+        });
     };
 
     if (showSplash) {
@@ -75,7 +87,9 @@ export default function AuthPage({ onLogin }: { onLogin: (user: any) => void }) 
                                     type="text"
                                     placeholder="Full Name"
                                     className="bg-white/10 border-white/20 pl-10 text-white placeholder:text-white/50 focus:border-violet-500 focus:ring-violet-500"
-                                    required
+                                    required={!isLogin}
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 />
                             </motion.div>
                         )}
@@ -88,6 +102,8 @@ export default function AuthPage({ onLogin }: { onLogin: (user: any) => void }) 
                             placeholder="Email Address"
                             className="bg-white/10 border-white/20 pl-10 text-white placeholder:text-white/50 focus:border-violet-500 focus:ring-violet-500"
                             required
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         />
                     </div>
 
@@ -98,6 +114,8 @@ export default function AuthPage({ onLogin }: { onLogin: (user: any) => void }) 
                             placeholder="Password"
                             className="bg-white/10 border-white/20 pl-10 text-white placeholder:text-white/50 focus:border-violet-500 focus:ring-violet-500"
                             required
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         />
                     </div>
 
