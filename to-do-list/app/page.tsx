@@ -6,11 +6,18 @@ import ProfileView from "@/components/profile/ProfileView";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Calendar as CalendarIcon, ListTodo, Star, User, LogOut, CheckCircle2, Delete, Trash2, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, ListTodo, Star, User, LogOut, CheckCircle2, Delete, Trash2, Plus, X, Edit2, ChevronRight, CheckSquare } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "@/app/calendar-custom.css";
+import { AnimatePresence, motion } from "framer-motion";
+
+interface SubTask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
 
 interface Task {
   id: string;
@@ -18,6 +25,7 @@ interface Task {
   completed: boolean;
   date: Date;
   important: boolean;
+  subtasks: SubTask[];
 }
 
 interface UserProfile {
@@ -30,12 +38,159 @@ interface UserProfile {
   securityAnswer?: string;
 }
 
+// Modal Component for Task Details (Edit & Subtasks)
+function TaskDetailModal({
+  task,
+  onClose,
+  onUpdate
+}: {
+  task: Task;
+  onClose: () => void;
+  onUpdate: (updatedTask: Task) => void;
+}) {
+  const [editedTask, setEditedTask] = useState<Task>(task);
+  const [newSubtask, setNewSubtask] = useState("");
+
+  const handleAddSubtask = () => {
+    if (!newSubtask.trim()) return;
+    const sub: SubTask = {
+      id: crypto.randomUUID(),
+      title: newSubtask,
+      completed: false
+    };
+    const updated = { ...editedTask, subtasks: [...editedTask.subtasks, sub] };
+    setEditedTask(updated);
+    onUpdate(updated);
+    setNewSubtask("");
+  };
+
+  const toggleSubtask = (subId: string) => {
+    const updatedSubtasks = editedTask.subtasks.map(s =>
+      s.id === subId ? { ...s, completed: !s.completed } : s
+    );
+    const updated = { ...editedTask, subtasks: updatedSubtasks };
+    setEditedTask(updated);
+    onUpdate(updated);
+  };
+
+  const deleteSubtask = (subId: string) => {
+    const updatedSubtasks = editedTask.subtasks.filter(s => s.id !== subId);
+    const updated = { ...editedTask, subtasks: updatedSubtasks };
+    setEditedTask(updated);
+    onUpdate(updated);
+  };
+
+  const saveTitle = (newTitle: string) => {
+    const updated = { ...editedTask, title: newTitle };
+    setEditedTask(updated);
+    onUpdate(updated);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <GlassCard className="w-full max-w-lg p-0 overflow-hidden animate-in fade-in zoom-in duration-300">
+        <div className="p-6 space-y-6">
+          {/* Header / Title Edit */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1 block">
+                Task Title
+              </label>
+              <Input
+                value={editedTask.title}
+                onChange={(e) => saveTitle(e.target.value)}
+                className="text-lg font-bold bg-transparent border-transparent px-0 h-auto focus:ring-0 focus:border-violet-500 rounded-none border-b border-zinc-200 dark:border-zinc-700 w-full"
+              />
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Subtasks Section */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold flex items-center gap-2">
+                <CheckSquare className="h-4 w-4 text-violet-500" />
+                Sub-tasks
+              </h4>
+              <span className="text-xs text-zinc-500">
+                {editedTask.subtasks.filter(s => s.completed).length}/{editedTask.subtasks.length} Completed
+              </span>
+            </div>
+
+            {/* List */}
+            <div className="space-y-2 max-h-[200px] overflow-y-auto mb-4 custom-scrollbar pr-2">
+              {editedTask.subtasks.length === 0 && (
+                <p className="text-sm text-zinc-400 italic text-center py-2">No sub-tasks yet.</p>
+              )}
+              {editedTask.subtasks.map(sub => (
+                <div key={sub.id} className="flex items-center gap-3 group">
+                  <button
+                    onClick={() => toggleSubtask(sub.id)}
+                    className={`flex-shrink-0 h-4 w-4 rounded border flex items-center justify-center transition-colors ${sub.completed
+                      ? "bg-violet-500 border-violet-500 text-white"
+                      : "border-zinc-400 hover:border-violet-500"
+                      }`}
+                  >
+                    {sub.completed && <CheckCircle2 className="h-3 w-3" />}
+                  </button>
+                  <span className={`flex-1 text-sm ${sub.completed ? "line-through opacity-60" : ""}`}>
+                    {sub.title}
+                  </span>
+                  <button onClick={() => deleteSubtask(sub.id)} className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 transition-opacity">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add New Subtask */}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add a sub-task..."
+                value={newSubtask}
+                onChange={(e) => setNewSubtask(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddSubtask()}
+                className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+              />
+              <Button onClick={handleAddSubtask} size="sm" className="bg-violet-100 text-violet-600 hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-300">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Meta Info (Read Only for now) */}
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-100 dark:border-white/5 text-sm">
+            <div>
+              <span className="text-zinc-500 block text-xs mb-1">Created Date</span>
+              <span className="font-medium">{format(new Date(editedTask.date), "PPP")}</span>
+            </div>
+            <div>
+              <span className="text-zinc-500 block text-xs mb-1">Status</span>
+              <span className={`inline-flex items-center gap-1 font-medium ${editedTask.completed ? "text-green-500" : "text-amber-500"}`}>
+                {editedTask.completed ? "Completed" : "Pending"}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="bg-zinc-50 dark:bg-white/5 p-4 flex justify-end">
+          <Button onClick={onClose} className="bg-violet-600 hover:bg-violet-700 text-white">
+            Done
+          </Button>
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
 export default function Home() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState("today");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedTaskForEdit, setSelectedTaskForEdit] = useState<Task | null>(null);
 
   /* Persistence Logic */
   useEffect(() => {
@@ -69,6 +224,7 @@ export default function Home() {
           const parsedTasks = JSON.parse(savedTasks).map((task: any) => ({
             ...task,
             date: new Date(task.date),
+            subtasks: task.subtasks || [] // Ensure subtasks exist
           }));
           setTasks(parsedTasks);
         } catch (e) {
@@ -159,9 +315,14 @@ export default function Home() {
       completed: false,
       date: activeTab === "calendar" ? selectedDate : new Date(), // Use selected date if in calendar view
       important: activeTab === "important",
+      subtasks: []
     };
     setTasks([...tasks, task]);
     setNewTask("");
+  };
+
+  const updateTask = (updatedTask: Task) => {
+    setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
   };
 
   const toggleTask = (id: string) => {
@@ -244,121 +405,156 @@ export default function Home() {
     }
 
     return (
-      <section className="grid gap-6 lg:grid-cols-3">
-        {/* Task List Section */}
-        <GlassCard className="col-span-2 min-h-[500px] flex flex-col">
-          <h3 className="mb-6 text-2xl font-semibold capitalize">
-            {activeTab === "calendar" ? `Tasks for ${format(selectedDate, "MMM do")}` : activeTab === "tasks" ? "All Tasks" : `${activeTab} Tasks`}
-          </h3>
+      <>
+        <section className="grid gap-6 lg:grid-cols-3">
+          {/* Task List Section */}
+          <GlassCard className="col-span-2 min-h-[500px] flex flex-col">
+            <h3 className="mb-6 text-2xl font-semibold capitalize">
+              {activeTab === "calendar" ? `Tasks for ${format(selectedDate, "MMM do")}` : activeTab === "tasks" ? "All Tasks" : `${activeTab} Tasks`}
+            </h3>
 
-          {/* Add Task Input */}
-          <div className="flex gap-2 mb-6">
-            <Input
-              placeholder="Add a new task..."
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addTask()}
-              className="bg-white/40 border-white/40 dark:bg-black/40 dark:border-white/10"
-            />
-            <Button onClick={() => addTask()} className="bg-violet-600 hover:bg-violet-700 text-white px-4">
-              <Plus className="h-5 w-5" />
-            </Button>
-          </div>
-
-          {/* Tasks Display */}
-          <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-            {filteredTasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
-                <div className="mb-4 rounded-full bg-zinc-100 p-6 dark:bg-zinc-800">
-                  <ListTodo className="h-12 w-12" />
-                </div>
-                <p className="text-lg font-medium">No tasks found</p>
-                <p className="text-sm">Start by adding a new task to your day.</p>
-              </div>
-            ) : (
-              filteredTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className={`group flex items-center justify-between rounded-lg border p-4 transition-all hover:shadow-md ${task.completed
-                    ? "bg-zinc-50 border-transparent opacity-60 dark:bg-white/5"
-                    : "bg-white border-white/40 dark:bg-white/10 dark:border-white/10"
-                    }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => toggleTask(task.id)}
-                      className={`flex h-6 w-6 items-center justify-center rounded-full border transition-colors ${task.completed
-                        ? "bg-green-500 border-green-500 text-white"
-                        : "border-zinc-400 hover:border-violet-500"
-                        }`}
-                    >
-                      {task.completed && <CheckCircle2 className="h-4 w-4" />}
-                    </button>
-                    <span className={`${task.completed ? "line-through opacity-70" : ""}`}>
-                      {task.title}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-xs opacity-50 mr-2">{format(new Date(task.date), 'MMM d')}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteTask(task.id);
-                      }}
-                      className="text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </GlassCard>
-
-        {/* Right Panel: Stats Only (Calendar Removed) */}
-        <div className="space-y-6">
-          <GlassCard className="bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border-violet-200 dark:border-violet-900/30">
-            <h3 className="mb-4 text-lg font-semibold">{overviewTitle}</h3>
-            <div className="flex justify-between text-sm mb-2">
-              <span className="opacity-70">Completed</span>
-              <span className="font-bold text-violet-600 dark:text-violet-400">
-                {overviewCompleted}/{overviewTotal}
-              </span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
-              <div
-                className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
-                style={{ width: `${overviewProgress}%` }}
+            {/* Add Task Input */}
+            <div className="flex gap-2 mb-6">
+              <Input
+                placeholder="Add a new task..."
+                value={newTask}
+                onChange={(e) => setNewTask(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addTask()}
+                className="bg-white/40 border-white/40 dark:bg-black/40 dark:border-white/10"
               />
+              <Button onClick={() => addTask()} className="bg-violet-600 hover:bg-violet-700 text-white px-4">
+                <Plus className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Tasks Display */}
+            <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {filteredTasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
+                  <div className="mb-4 rounded-full bg-zinc-100 p-6 dark:bg-zinc-800">
+                    <ListTodo className="h-12 w-12" />
+                  </div>
+                  <p className="text-lg font-medium">No tasks found</p>
+                  <p className="text-sm">Start by adding a new task to your day.</p>
+                </div>
+              ) : (
+                filteredTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    onClick={() => setSelectedTaskForEdit(task)}
+                    className={`group flex items-center justify-between rounded-lg border p-4 transition-all hover:shadow-md cursor-pointer ${task.completed
+                      ? "bg-zinc-50 border-transparent opacity-60 dark:bg-white/5"
+                      : "bg-white border-white/40 dark:bg-white/10 dark:border-white/10"
+                      }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }}
+                        className={`flex h-6 w-6 items-center justify-center rounded-full border transition-colors ${task.completed
+                          ? "bg-green-500 border-green-500 text-white"
+                          : "border-zinc-400 hover:border-violet-500"
+                          }`}
+                      >
+                        {task.completed && <CheckCircle2 className="h-4 w-4" />}
+                      </button>
+                      <div>
+                        <span className={`${task.completed ? "line-through opacity-70" : ""}`}>
+                          {task.title}
+                        </span>
+                        {task.subtasks && task.subtasks.length > 0 && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-zinc-500 flex items-center gap-1">
+                              <ListTodo className="h-3 w-3" />
+                              {task.subtasks.filter(s => s.completed).length}/{task.subtasks.length}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs opacity-50 mr-2">{format(new Date(task.date), 'MMM d')}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTaskForEdit(task);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:bg-zinc-100 hover:text-violet-600 dark:hover:bg-zinc-800"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteTask(task.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </GlassCard>
 
-          {/* Calendar Widget */}
-          <GlassCard className="p-4 flex justify-center">
-            <Calendar
-              onChange={(value) => {
-                if (value instanceof Date) setSelectedDate(value);
-                else if (Array.isArray(value) && value.length > 0 && value[0] instanceof Date) setSelectedDate(value[0]);
-                setActiveTab("calendar");
-              }}
-              value={selectedDate}
-              className="react-calendar-custom"
-              tileClassName={({ date, view }) => {
-                if (view === "month") {
-                  const hasTask = tasks.some(t => isSameDay(t.date, date));
-                  return hasTask ? "has-task" : "";
-                }
-                return null;
-              }}
-            />
-          </GlassCard>
+          {/* Right Panel: Stats Only (Calendar Removed) */}
+          <div className="space-y-6">
+            <GlassCard className="bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border-violet-200 dark:border-violet-900/30">
+              <h3 className="mb-4 text-lg font-semibold">{overviewTitle}</h3>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="opacity-70">Completed</span>
+                <span className="font-bold text-violet-600 dark:text-violet-400">
+                  {overviewCompleted}/{overviewTotal}
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                <div
+                  className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
+                  style={{ width: `${overviewProgress}%` }}
+                />
+              </div>
+            </GlassCard>
 
-        </div>
-      </section>
+            {/* Calendar Widget */}
+            <GlassCard className="p-4 flex justify-center">
+              <Calendar
+                onChange={(value) => {
+                  if (value instanceof Date) setSelectedDate(value);
+                  else if (Array.isArray(value) && value.length > 0 && value[0] instanceof Date) setSelectedDate(value[0]);
+                  setActiveTab("calendar");
+                }}
+                value={selectedDate}
+                className="react-calendar-custom"
+                tileClassName={({ date, view }) => {
+                  if (view === "month") {
+                    const hasTask = tasks.some(t => isSameDay(t.date, date));
+                    return hasTask ? "has-task" : "";
+                  }
+                  return null;
+                }}
+              />
+            </GlassCard>
+
+          </div>
+        </section>
+
+        {/* Task Edit Modal */}
+        {
+          selectedTaskForEdit && (
+            <TaskDetailModal
+              task={selectedTaskForEdit}
+              onClose={() => setSelectedTaskForEdit(null)}
+              onUpdate={updateTask}
+            />
+          )
+        }
+      </>
     );
   };
 
