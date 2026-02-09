@@ -1,10 +1,8 @@
-"use client";
-
 import { useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { User, CheckCircle2, Clock, Trophy, Edit2, CalendarDays, Save, X, Trash2 } from "lucide-react";
+import { User, CheckCircle2, Clock, Trophy, Edit2, CalendarDays, Save, X, Trash2, Quote } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -21,6 +19,7 @@ interface UserProfile {
     email?: string;
     dob?: string;
     bio?: string;
+    dailyQuote?: string;
 }
 
 interface ProfileViewProps {
@@ -33,6 +32,8 @@ interface ProfileViewProps {
 export default function ProfileView({ user, tasks, onUpdateUser, onDeleteUser }: ProfileViewProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<UserProfile>(user);
+    const [isEditingQuote, setIsEditingQuote] = useState(false);
+    const [quote, setQuote] = useState(user.dailyQuote || "Your daily inspiration goes here...");
 
     // Stats Calculations
     const completedCount = tasks.filter((t) => t.completed).length;
@@ -50,8 +51,15 @@ export default function ProfileView({ user, tasks, onUpdateUser, onDeleteUser }:
         setIsEditing(false);
     };
 
+    const handleSaveQuote = () => {
+        const updatedUser = { ...user, dailyQuote: quote };
+        onUpdateUser(updatedUser);
+        setFormData(updatedUser); // Keep formData in sync
+        setIsEditingQuote(false);
+    }
+
     return (
-        <div className="space-y-8 animate-in fade-in zoom-in duration-500">
+        <div className="space-y-8 animate-in fade-in zoom-in duration-500 pb-10">
             {/* Header Section */}
             <GlassCard className="relative overflow-hidden p-8">
                 <div className="absolute top-0 left-0 h-32 w-full bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20" />
@@ -176,11 +184,11 @@ export default function ProfileView({ user, tasks, onUpdateUser, onDeleteUser }:
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
-                <GlassCard className="p-6">
+                <GlassCard className="p-6 flex flex-col h-full">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold">Account Information</h3>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-4 flex-1">
                         <div className="flex flex-col sm:flex-row justify-between border-b border-zinc-100 py-3 dark:border-white/5">
                             <span className="text-zinc-500 mb-1 sm:mb-0">Username</span>
                             <span className="font-medium">{user.name}</span>
@@ -216,28 +224,68 @@ export default function ProfileView({ user, tasks, onUpdateUser, onDeleteUser }:
                             )}
                         </div>
                     </div>
+
+                    {/* Delete Account Button Moved Here */}
+                    <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-white/5">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs text-zinc-400">Permanently delete account.</span>
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+                                        onDeleteUser();
+                                    }
+                                }}
+                                className="text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 px-3 h-8 text-xs"
+                            >
+                                <Trash2 className="mr-2 h-3 w-3" />
+                                Delete
+                            </Button>
+                        </div>
+                    </div>
                 </GlassCard>
 
-                <GlassCard className="p-6 flex flex-col justify-center items-center text-center space-y-4 border-red-200 dark:border-red-900/30">
-                    <div className="p-3 rounded-full bg-red-100 text-red-600 dark:bg-red-900/20">
-                        <Trash2 className="h-6 w-6" />
+                {/* Quote of the Day (Replaces Danger Zone) */}
+                <GlassCard className="p-6 h-full flex flex-col relative overflow-hidden bg-gradient-to-br from-violet-500/5 to-fuchsia-500/5">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2 text-violet-600 dark:text-violet-400">
+                            <Quote className="h-5 w-5 fill-current" /> Quote of the Day
+                        </h3>
+                        {!isEditingQuote ? (
+                            <Button variant="ghost" size="sm" onClick={() => setIsEditingQuote(true)} className="h-8 w-8 p-0 rounded-full">
+                                <Edit2 className="h-4 w-4 text-zinc-400" />
+                            </Button>
+                        ) : (
+                            <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" onClick={handleSaveQuote} className="h-8 w-8 p-0 rounded-full text-green-500 hover:text-green-600">
+                                    <CheckCircle2 className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => setIsEditingQuote(false)} className="h-8 w-8 p-0 rounded-full text-red-500 hover:text-red-600">
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
                     </div>
-                    <div>
-                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Danger Zone</h3>
-                        <p className="text-sm text-zinc-500 mt-1">
-                            Once you delete your account, there is no going back. All your data will be permanently removed.
-                        </p>
+
+                    <div className="flex-1 flex flex-col justify-center items-center text-center p-4">
+                        {isEditingQuote ? (
+                            <textarea
+                                value={quote}
+                                onChange={(e) => setQuote(e.target.value)}
+                                className="w-full h-32 bg-white/50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-lg p-4 resize-none focus:ring-2 focus:ring-violet-500 outline-none transition-all text-center italic font-serif text-lg text-zinc-700 dark:text-zinc-300"
+                                placeholder="Enter your daily inspiration..."
+                                autoFocus
+                            />
+                        ) : (
+                            <div className="relative">
+                                <Quote className="absolute -top-4 -left-4 h-8 w-8 text-violet-200 dark:text-violet-900/40 fill-current transform scale-x-[-1]" />
+                                <p className="text-xl font-serif italic text-zinc-700 dark:text-zinc-300 leading-relaxed px-6">
+                                    "{user.dailyQuote || "Your daily inspiration goes here..."}"
+                                </p>
+                                <Quote className="absolute -bottom-4 -right-4 h-8 w-8 text-violet-200 dark:text-violet-900/40 fill-current" />
+                            </div>
+                        )}
                     </div>
-                    <Button
-                        onClick={() => {
-                            if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-                                onDeleteUser();
-                            }
-                        }}
-                        className="bg-red-500 hover:bg-red-600 text-white w-full sm:w-auto"
-                    >
-                        Delete Account
-                    </Button>
                 </GlassCard>
             </div>
         </div>

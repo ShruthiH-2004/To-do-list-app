@@ -36,6 +36,7 @@ interface UserProfile {
   bio?: string;
   securityQuestion?: string;
   securityAnswer?: string;
+  dailyQuote?: string;
 }
 
 // Modal Component for Task Details (Edit & Subtasks)
