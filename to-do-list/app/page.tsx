@@ -193,6 +193,11 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTaskForEdit, setSelectedTaskForEdit] = useState<Task | null>(null);
   const [theme, setTheme] = useState("light");
+  const [newTaskImportant, setNewTaskImportant] = useState(false);
+
+  useEffect(() => {
+    setNewTaskImportant(activeTab === "important");
+  }, [activeTab]);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
@@ -339,11 +344,12 @@ export default function Home() {
       title: newTask,
       completed: false,
       date: activeTab === "calendar" ? selectedDate : new Date(), // Use selected date if in calendar view
-      important: activeTab === "important",
+      important: newTaskImportant,
       subtasks: []
     };
     setTasks([task, ...tasks]);
     setNewTask("");
+    setNewTaskImportant(activeTab === "important");
   };
 
   const updateTask = (updatedTask: Task) => {
@@ -352,6 +358,10 @@ export default function Home() {
 
   const toggleTask = (id: string) => {
     setTasks(tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
+  };
+
+  const toggleImportant = (id: string) => {
+    setTasks(tasks.map((t) => (t.id === id ? { ...t, important: !t.important } : t)));
   };
 
   const deleteTask = (id: string) => {
@@ -445,8 +455,16 @@ export default function Home() {
 
             {/* Add Task Input */}
             <div className="flex gap-2 mb-6">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setNewTaskImportant(!newTaskImportant)}
+                className={`flex-shrink-0 border-zinc-200 dark:border-white/10 ${newTaskImportant ? "bg-amber-50 dark:bg-amber-900/20 text-amber-500 border-amber-200" : "bg-white/40 dark:bg-black/40 text-zinc-400"}`}
+              >
+                <Star className={`h-5 w-5 ${newTaskImportant ? "fill-current" : ""}`} />
+              </Button>
               <Input
-                placeholder="Add a new task..."
+                placeholder={`Add a new ${newTaskImportant ? "important " : ""}task...`}
                 value={newTask}
                 onChange={(e) => setNewTask(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addTask()}
@@ -503,6 +521,17 @@ export default function Home() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleImportant(task.id);
+                        }}
+                        className={`transition-opacity ${task.important ? "text-amber-500 opacity-100" : "text-zinc-400 hover:text-amber-500 opacity-0 group-hover:opacity-100"}`}
+                      >
+                        <Star className={`h-4 w-4 ${task.important ? "fill-current" : ""}`} />
+                      </Button>
                       <span className="text-xs opacity-50 mr-2">{format(new Date(task.date), 'MMM d')}</span>
                       <Button
                         variant="ghost"
@@ -564,8 +593,27 @@ export default function Home() {
                 className="react-calendar-custom"
                 tileClassName={({ date, view }) => {
                   if (view === "month") {
+                    // Optional: Keep has-task class for styling if needed, but not for content
+                    return tasks.some(t => isSameDay(t.date, date)) ? "has-task-marker" : null;
+                  }
+                  return null;
+                }}
+                tileContent={({ date, view }) => {
+                  if (view === "month") {
+                    const hasImportantTask = tasks.some(t => isSameDay(t.date, date) && t.important);
+                    if (hasImportantTask) {
+                      return (
+                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 mb-1">
+                          <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                        </div>
+                      );
+                    }
                     const hasTask = tasks.some(t => isSameDay(t.date, date));
-                    return hasTask ? "has-task" : "";
+                    if (hasTask) {
+                      return (
+                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 mb-2 w-1 h-1 bg-pink-500 rounded-full" />
+                      );
+                    }
                   }
                   return null;
                 }}
