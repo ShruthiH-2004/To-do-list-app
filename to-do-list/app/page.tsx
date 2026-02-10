@@ -6,7 +6,7 @@ import ProfileView from "@/components/profile/ProfileView";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Calendar as CalendarIcon, ListTodo, Star, User, LogOut, CheckCircle2, Trash2, Plus, X, Edit2, CheckSquare } from "lucide-react";
+import { Calendar as CalendarIcon, ListTodo, Star, User, LogOut, CheckCircle2, Trash2, Plus, X, Edit2, CheckSquare, Sun, Moon } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
@@ -192,6 +192,30 @@ export default function Home() {
   const [newTask, setNewTask] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTaskForEdit, setSelectedTaskForEdit] = useState<Task | null>(null);
+  const [theme, setTheme] = useState("light");
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem("theme");
+    const applyTheme = (t: string) => {
+      setTheme(t);
+      document.documentElement.classList.toggle("dark", t === "dark");
+      document.body.classList.toggle("dark", t === "dark");
+    };
+
+    if (storedTheme) {
+      applyTheme(storedTheme);
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      applyTheme("dark");
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    document.body.classList.toggle("dark", newTheme === "dark");
+  };
 
   /* Persistence Logic */
   useEffect(() => {
@@ -318,7 +342,7 @@ export default function Home() {
       important: activeTab === "important",
       subtasks: []
     };
-    setTasks([...tasks, task]);
+    setTasks([task, ...tasks]);
     setNewTask("");
   };
 
@@ -595,6 +619,14 @@ export default function Home() {
             </button>
           ))}
         </nav>
+
+        <button
+          onClick={toggleTheme}
+          className="flex w-full items-center rounded-lg px-4 py-3 text-sm font-medium transition-all hover:bg-white/50 dark:hover:bg-white/5 mb-2"
+        >
+          {theme === "dark" ? <Sun className="mr-3 h-5 w-5" /> : <Moon className="mr-3 h-5 w-5" />}
+          {theme === "dark" ? "Light Mode" : "Dark Mode"}
+        </button>
 
         <div className="mt-auto border-t border-zinc-200 py-4 dark:border-zinc-800">
           <div

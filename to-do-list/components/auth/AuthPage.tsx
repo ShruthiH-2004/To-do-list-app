@@ -73,7 +73,7 @@ export default function AuthPage({ onAuth }: { onAuth: (user: any, method: "logi
                     transition={{ duration: 0.8, type: "spring" }}
                     className="text-6xl font-bold text-white drop-shadow-lg"
                 >
-                    Hello
+                    To-Do-List
                 </motion.h1>
             </motion.div>
         );

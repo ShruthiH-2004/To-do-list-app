@@ -18,7 +18,7 @@ interface Task {
 
 interface UserProfile {
     name: string;
-    email?: string;
+    email: string;
     dob?: string;
     bio?: string;
     dailyQuote?: string;
